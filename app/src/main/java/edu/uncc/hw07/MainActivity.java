@@ -6,7 +6,7 @@ import android.os.Bundle;
 
 import com.google.firebase.auth.FirebaseAuth;
 
-public class MainActivity extends AppCompatActivity implements LoginFragment.LoginListener, SignUpFragment.SignUpListener {
+public class MainActivity extends AppCompatActivity implements LoginFragment.LoginListener, SignUpFragment.SignUpListener, ForumsFragment.ForumsFragmentListener, CreateForumFragment.CreateForumFragmentListener {
 
     private FirebaseAuth mAuth;
 
@@ -47,5 +47,34 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.Log
     @Override
     public void login() {
         getSupportFragmentManager().popBackStack();
+    }
+
+    @Override
+    public void cancel() {
+        getSupportFragmentManager().popBackStack();
+    }
+
+    @Override
+    public void goToForums() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.rootView, new ForumsFragment(), "Forums")
+                .commit();
+    }
+
+    @Override
+    public void logout() {
+        FirebaseAuth.getInstance().signOut();
+
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.rootView, new LoginFragment(), "Login")
+                .commit();
+    }
+
+    @Override
+    public void newForum() {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.rootView, new CreateForumFragment(), "Create Forum")
+                .addToBackStack(null)
+                .commit();
     }
 }

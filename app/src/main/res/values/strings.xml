@@ -10,6 +10,9 @@
     <string name="enter_post_label">Enter Post</string>
     <string name="create_forum">New Forum</string>
     <string name="posts_label">Posts</string>
+    <string name="forums">Forums</string>
+    <string name="forum_title">Forum Title</string>
+    <string name="forum_desc">Forum Description</string>
     <string name="create_account_label">Create New Account</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

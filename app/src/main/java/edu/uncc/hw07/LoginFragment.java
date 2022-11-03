@@ -7,14 +7,25 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.AuthResult;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
 import edu.uncc.hw07.databinding.FragmentLoginBinding;
 
 public class LoginFragment extends Fragment {
+
+    private FirebaseAuth mAuth;
+    final String TAG = "test";
+
     public LoginFragment() {
         // Required empty public constructor
     }
@@ -47,9 +58,22 @@ public class LoginFragment extends Fragment {
                 } else if (password.isEmpty()){
                     Toast.makeText(getActivity(), "Enter valid password!", Toast.LENGTH_SHORT).show();
                 } else {
+                    mAuth = FirebaseAuth.getInstance();
 
-
-
+                    mAuth.signInWithEmailAndPassword(email, password)
+                            .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
+                                @Override
+                                public void onSuccess(AuthResult authResult) {
+                                    Log.d(TAG, "onSuccess: ");
+                                    mListener.goToForums();
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Toast.makeText(getContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
                 }
             }
         });
@@ -74,5 +98,6 @@ public class LoginFragment extends Fragment {
 
     interface LoginListener {
         void createNewAccount();
+        void goToForums();
     }
 }
