@@ -130,7 +130,6 @@ public class CreateForumFragment extends Fragment {
 
         // Create sub collections of comments and likes
         // Need dummy documents to exist
-        collRef.document(forum_id).collection("comments").document("dummy").set(collection);
         collRef.document(forum_id).collection("likes").document("dummy").set(collection);
 
         // Set the data into the document created using its id to locate it

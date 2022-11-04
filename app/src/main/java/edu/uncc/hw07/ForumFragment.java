@@ -6,13 +6,32 @@ import android.os.Bundle;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
-import java.io.Serializable;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+
+import edu.uncc.hw07.databinding.CommentRowItemBinding;
 import edu.uncc.hw07.databinding.FragmentForumBinding;
 
 /**
@@ -22,6 +41,8 @@ import edu.uncc.hw07.databinding.FragmentForumBinding;
  */
 public class ForumFragment extends Fragment {
 
+    final String TAG = "test";
+    private FirebaseAuth mAuth;
     FragmentForumBinding binding;
 
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -72,6 +93,138 @@ public class ForumFragment extends Fragment {
         binding.textViewForumText.setText(mForum.description);
 
         getActivity().setTitle(R.string.forum);
+
+        binding.recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        adapter = new CommentAdapter();
+        binding.recyclerView.setAdapter(adapter);
+
+        getComments();
+
+        binding.buttonSubmitComment.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Get text
+                String text = binding.editTextComment.getText().toString();
+
+                // Check text
+                if(text.isEmpty()) {
+                    Toast.makeText(getContext(), "Please enter a comment.", Toast.LENGTH_SHORT).show();
+                } else {
+                    String user_id = mAuth.getCurrentUser().getUid();
+                    String user_name = mAuth.getCurrentUser().getDisplayName();
+                    // Post Comment
+                    postComment(text, user_id, user_name);
+                }
+            }
+        });
+    }
+
+    private  void getComments() {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("forums").document(mForum.forum_id).collection("comments")
+                .addSnapshotListener(new EventListener<QuerySnapshot>() {
+                    @Override
+                    public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
+                        for(QueryDocumentSnapshot document : value) {
+                            Comment comment = document.toObject(Comment.class);
+                            mComments.add(comment);
+                        }
+                        adapter.notifyDataSetChanged();
+                    }
+                });
+    }
+
+    private void postComment(String text, String user_id, String user_name) {
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        CollectionReference collComments = db.collection("forums").document(mForum.forum_id).collection("comments");
+        String comment_id = collComments.document().getId();
+
+        // Get the current date and time
+        // Format it to a String
+        DateFormat df = new SimpleDateFormat("MM/dd/yyyy hh:mm a");
+        String created_At = df.format(Calendar.getInstance().getTime());
+
+        // Create the comment
+        HashMap<String, Object> comment = new HashMap<>();
+        comment.put("text", text);
+        comment.put("user_id", user_id);
+        comment.put("user_name", user_name);
+        comment.put("created_At", created_At);
+        comment.put("comment_id", comment_id);
+
+        collComments.document(comment_id).set(comment)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+                        Log.d(TAG, "onSuccess: ");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d(TAG, "onFailure: " + e.getMessage());
+                    }
+                });
+    }
+
+    CommentAdapter adapter;
+    ArrayList<Comment> mComments;
+
+    class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
+
+        @NonNull
+        @Override
+        public CommentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            CommentRowItemBinding binding = CommentRowItemBinding.inflate(getLayoutInflater(), parent, false);
+            return new CommentViewHolder(binding);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull CommentViewHolder holder, int position) {
+            Comment comment = mComments.get(position);
+            holder.setupUI(comment);
+        }
+
+        @Override
+        public int getItemCount() {
+            return mComments.size();
+        }
+
+        class CommentViewHolder extends RecyclerView.ViewHolder {
+
+            CommentRowItemBinding mBinding;
+            Comment mComment;
+
+            public CommentViewHolder(CommentRowItemBinding binding) {
+                super(binding.getRoot());
+                mBinding = binding;
+            }
+
+            private void setupUI(Comment comment) {
+                mComment = comment;
+                mBinding.textViewCommentText.setText(mComment.text);
+                mBinding.textViewCommentCreatedBy.setText(mComment.user_name);
+                mBinding.textViewCommentCreatedAt.setText(mComment.created_At);
+
+                // Delete Button visibility
+                if (mAuth.getCurrentUser().getUid().equals(mComment.user_id)) {
+                    mBinding.imageViewDelete.setVisibility(View.VISIBLE);
+                } else {
+                    mBinding.imageViewDelete.setVisibility(View.INVISIBLE);
+                }
+
+                // Delete Button
+                mBinding.imageViewDelete.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+
+                    }
+                });
+            }
+        }
     }
 
     @Override
