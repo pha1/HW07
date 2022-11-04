@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * SignUpFragment.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import android.content.Context;
@@ -69,6 +76,7 @@ public class SignUpFragment extends Fragment {
                 } else {
                     mAuth = FirebaseAuth.getInstance();
 
+                    // Create Account
                     mAuth.createUserWithEmailAndPassword(email, password)
                             .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                                 @Override
@@ -82,6 +90,7 @@ public class SignUpFragment extends Fragment {
                                     // Successfully created Account, go to Forums
                                     mListener.goToForums();
                                 }
+                                // Display error message
                             }).addOnFailureListener(new OnFailureListener() {
                                 @Override
                                 public void onFailure(@NonNull Exception e) {

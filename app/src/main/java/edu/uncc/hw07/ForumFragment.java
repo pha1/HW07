@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * ForumFragment.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import android.content.Context;
@@ -57,7 +64,7 @@ public class ForumFragment extends Fragment {
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
      *
-     * @param mForum Parameter 1.
+     * @param mForum The Forum the user selected from ForumsFragment
      * @return A new instance of fragment ForumFragment.
      */
     public static ForumFragment newInstance(Forum mForum) {
@@ -110,6 +117,7 @@ public class ForumFragment extends Fragment {
                 if(text.isEmpty()) {
                     Toast.makeText(getContext(), "Please enter a comment.", Toast.LENGTH_SHORT).show();
                 } else {
+                    mAuth = FirebaseAuth.getInstance();
                     String user_id = mAuth.getCurrentUser().getUid();
                     String user_name = mAuth.getCurrentUser().getDisplayName();
                     // Post Comment
@@ -119,27 +127,45 @@ public class ForumFragment extends Fragment {
         });
     }
 
-    private  void getComments() {
+    /**
+     * This method gets the documents from the database and creates Comment Objects and
+     * add it to the mComments ArrayList
+     */
+    private void getComments() {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
         db.collection("forums").document(mForum.forum_id).collection("comments")
                 .addSnapshotListener(new EventListener<QuerySnapshot>() {
                     @Override
                     public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
+                        // Clear the ArrayList, so it does not duplicate any results
+                        mComments.clear();
+                        // Loop Documents
                         for(QueryDocumentSnapshot document : value) {
                             Comment comment = document.toObject(Comment.class);
                             mComments.add(comment);
                         }
                         adapter.notifyDataSetChanged();
+                        // Update the comments count
+                        updateCommentCount();
                     }
                 });
     }
 
+    /**
+     * This method creates a post and adds it to the database
+     * @param text Comment text
+     * @param user_id User Id of the current user
+     * @param user_name Name of the current user
+     */
     private void postComment(String text, String user_id, String user_name) {
 
+        // Database
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+        // Reference to Comments Collection
         CollectionReference collComments = db.collection("forums").document(mForum.forum_id).collection("comments");
+        // Id of the empty document created
         String comment_id = collComments.document().getId();
 
         // Get the current date and time
@@ -155,11 +181,11 @@ public class ForumFragment extends Fragment {
         comment.put("created_At", created_At);
         comment.put("comment_id", comment_id);
 
+        // Set the document with data from Comment
         collComments.document(comment_id).set(comment)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
-                        Log.d(TAG, "onSuccess: ");
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
@@ -168,10 +194,20 @@ public class ForumFragment extends Fragment {
                         Log.d(TAG, "onFailure: " + e.getMessage());
                     }
                 });
+        // Increment and update number of comments in the Forum
+        mForum.comments++;
+        db.collection("forums").document(mForum.forum_id).update("comments", mForum.comments);
+    }
+
+    /**
+     * Update the number of comments displayed
+     */
+    private void updateCommentCount() {
+        binding.textViewCommentsCount.setText(mForum.comments + " Comments");
     }
 
     CommentAdapter adapter;
-    ArrayList<Comment> mComments;
+    ArrayList<Comment> mComments = new ArrayList<>();
 
     class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.CommentViewHolder> {
 
@@ -203,11 +239,14 @@ public class ForumFragment extends Fragment {
                 mBinding = binding;
             }
 
+            // Set up UI method
             private void setupUI(Comment comment) {
                 mComment = comment;
                 mBinding.textViewCommentText.setText(mComment.text);
                 mBinding.textViewCommentCreatedBy.setText(mComment.user_name);
                 mBinding.textViewCommentCreatedAt.setText(mComment.created_At);
+
+                mAuth = FirebaseAuth.getInstance();
 
                 // Delete Button visibility
                 if (mAuth.getCurrentUser().getUid().equals(mComment.user_id)) {
@@ -220,11 +259,42 @@ public class ForumFragment extends Fragment {
                 mBinding.imageViewDelete.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-
+                        delete(mComment);
                     }
                 });
             }
         }
+    }
+
+    /**
+     * Delete the comment selected
+     * @param comment The comment to be deleted
+     */
+    private void delete(Comment comment) {
+        // Database
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // Access the collections and documents required to delete the comment
+        db.collection("forums").document(mForum.forum_id)
+                .collection("comments").document(comment.comment_id)
+                .delete();
+
+        // Decrement number of comments in the Forum
+        mForum.comments--;
+        db.collection("forums").document(mForum.forum_id)
+                .update("comments", mForum.comments)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+                        Log.d(TAG, "onSuccess: ");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d(TAG, "onFailure: ");
+                    }
+                });
     }
 
     @Override

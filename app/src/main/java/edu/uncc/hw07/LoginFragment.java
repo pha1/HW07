@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * LoginFragment.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import android.content.Context;
@@ -60,6 +67,7 @@ public class LoginFragment extends Fragment {
                 } else {
                     mAuth = FirebaseAuth.getInstance();
 
+                    // Login
                     mAuth.signInWithEmailAndPassword(email, password)
                             .addOnSuccessListener(new OnSuccessListener<AuthResult>() {
                                 @Override
@@ -68,6 +76,7 @@ public class LoginFragment extends Fragment {
                                     mListener.goToForums();
                                 }
                             })
+                            // Display error message
                             .addOnFailureListener(new OnFailureListener() {
                                 @Override
                                 public void onFailure(@NonNull Exception e) {

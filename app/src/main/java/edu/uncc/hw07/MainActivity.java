@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * MainActivity.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import androidx.appcompat.app.AppCompatActivity;

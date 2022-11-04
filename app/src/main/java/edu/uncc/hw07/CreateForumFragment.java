@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * CreateForumFragment.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import android.content.Context;

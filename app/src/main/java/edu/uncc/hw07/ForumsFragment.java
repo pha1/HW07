@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * ForumsFragment.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import android.content.Context;
@@ -137,6 +144,7 @@ public class ForumsFragment extends Fragment {
                 mBinding = binding;
             }
 
+            // Set up UI method
             public void setupUI(Forum forum) {
                 mForum = forum;
                 mBinding.textViewForumTitle.setText(mForum.title);
@@ -185,16 +193,20 @@ public class ForumsFragment extends Fragment {
                                 .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                                     @Override
                                     public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                        // Default assume user is not in list
                                         boolean userInList = false;
                                         for(QueryDocumentSnapshot document : queryDocumentSnapshots){
                                             mAuth = FirebaseAuth.getInstance();
                                             Log.d(TAG, "onSuccess: " + mAuth.getCurrentUser().getUid());
                                             Log.d(TAG, "onSuccess: " + document.getString("user_id"));
+
+                                            // If the user is in the list update the data by deleting the user
                                             if (document.getString("user_id").equals(mAuth.getCurrentUser().getUid())){
                                                updateData(true);
                                                userInList = true;
                                             }
                                         }
+                                        // If they are not in the list, add them in
                                         if (!userInList) {
                                             updateData(false);
                                         }
@@ -214,6 +226,7 @@ public class ForumsFragment extends Fragment {
                 CollectionReference collForums = db.collection("forums");
                 CollectionReference collLikes = collForums.document(mForum.forum_id).collection("likes");
 
+                // If the user is in the list, delete them from the Collection
                 if (userInList) {
                     collLikes.get()
                             .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
@@ -253,7 +266,7 @@ public class ForumsFragment extends Fragment {
                                 }
                             });
                 } else {
-                    // Like a Forum
+                    // Add the user into the list (Collection)
                     collLikes.get()
                             .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
                                 @Override
@@ -328,6 +341,10 @@ public class ForumsFragment extends Fragment {
         }
     }
 
+    /**
+     * This method deletes the Forum from the database
+     * @param forum Forum selected to be deleted
+     */
     private void delete(Forum forum) {
         FirebaseFirestore db = FirebaseFirestore.getInstance();
 

@@ -1,3 +1,10 @@
+/**
+ * Group 9 HW 07
+ * Comment.java
+ * Phi Ha
+ * Srinath Dittakavi
+ */
+
 package edu.uncc.hw07;
 
 import java.io.Serializable;
