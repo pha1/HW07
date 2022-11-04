@@ -151,6 +151,13 @@ public class ForumsFragment extends Fragment {
                     }
                 });
 
+                itemView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        mListener.forumDetails(mForum);
+                    }
+                });
+
                 // Get the user id
                 mAuth = FirebaseAuth.getInstance();
                 String user_id = mAuth.getCurrentUser().getUid();
@@ -353,5 +360,6 @@ public class ForumsFragment extends Fragment {
     public interface ForumsFragmentListener{
         void logout();
         void newForum();
+        void forumDetails(Forum forum);
     }
 }

@@ -77,4 +77,12 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.Log
                 .addToBackStack(null)
                 .commit();
     }
+
+    @Override
+    public void forumDetails(Forum forum) {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.rootView, ForumFragment.newInstance(forum), "Forum Details")
+                .addToBackStack(null)
+                .commit();
+    }
 }

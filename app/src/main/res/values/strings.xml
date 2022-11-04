@@ -11,6 +11,7 @@
     <string name="create_forum">New Forum</string>
     <string name="posts_label">Posts</string>
     <string name="forums">Forums</string>
+    <string name="forum">Forum</string>
     <string name="forum_title">Forum Title</string>
     <string name="forum_desc">Forum Description</string>
     <string name="create_account_label">Create New Account</string>

@@ -1,6 +1,8 @@
 package edu.uncc.hw07;
 
-public class Forum {
+import java.io.Serializable;
+
+public class Forum implements Serializable {
 
     public String getTitle() {
         return title;
