@@ -126,7 +126,7 @@ public class CreateForumFragment extends Fragment {
         forum.put("forum_id", forum_id);
 
         HashMap<String, Object> collection = new HashMap<>();
-        collection.put("Dummy", "Dummy");
+        collection.put("user_id", "dummy");
 
         // Create sub collections of comments and likes
         // Need dummy documents to exist

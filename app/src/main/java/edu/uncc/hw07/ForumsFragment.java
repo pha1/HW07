@@ -137,9 +137,6 @@ public class ForumsFragment extends Fragment {
                 mBinding = binding;
             }
 
-            // Track if the user liked the image or not
-            boolean liked;
-
             public void setupUI(Forum forum) {
                 mForum = forum;
                 mBinding.textViewForumTitle.setText(mForum.title);
@@ -169,10 +166,139 @@ public class ForumsFragment extends Fragment {
                 FirebaseFirestore db = FirebaseFirestore.getInstance();
                 CollectionReference collForums = db.collection("forums");
                 CollectionReference collLikes = collForums.document(mForum.forum_id).collection("likes");
+                setImage();
 
+                // Like Button
+                mBinding.imageViewLike.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        Log.d(TAG, "onClick: ");
+                        // Check Database if the user's name is in the list or not
+                        collLikes.get()
+                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                        boolean userInList = false;
+                                        for(QueryDocumentSnapshot document : queryDocumentSnapshots){
+                                            mAuth = FirebaseAuth.getInstance();
+                                            Log.d(TAG, "onSuccess: " + mAuth.getCurrentUser().getUid());
+                                            Log.d(TAG, "onSuccess: " + document.getString("user_id"));
+                                            if (document.getString("user_id").equals(mAuth.getCurrentUser().getUid())){
+                                               updateData(true);
+                                               userInList = true;
+                                            }
+                                        }
+                                        if (!userInList) {
+                                            updateData(false);
+                                        }
+                                    }
+                                });
+                    }
+                });
+            }
+
+            /**
+             * This updates the data depending on whether the user is in the list or not
+             * @param userInList
+             */
+            private void updateData(boolean userInList) {
+                // This sets the initial like image
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
+                CollectionReference collForums = db.collection("forums");
+                CollectionReference collLikes = collForums.document(mForum.forum_id).collection("likes");
+
+                if (userInList) {
+                    collLikes.get()
+                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                @Override
+                                public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                    // Loop and delete if it exists
+                                    for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
+                                        mAuth = FirebaseAuth.getInstance();
+                                        getActivity().runOnUiThread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                // If dummy document take care of it
+                                                if (document.getString("user_id").equals(mAuth.getCurrentUser().getUid())) {
+                                                    Log.d(TAG, "Delete Like");
+                                                    // In the case where this is the only like left, you must create a dummy file
+                                                    // Otherwise the collection will disappear and break the database
+                                                    if (mForum.likes == 1) {
+                                                        HashMap<String, Object> like = new HashMap<>();
+                                                        like.put("user_id", "dummy");
+
+                                                        // Create dummy file
+                                                        String like_id = collLikes.document("dummy").getId();
+                                                        collLikes.document(like_id).set(like);
+                                                    }
+                                                    // Delete user_id from list
+                                                    collLikes.document(document.getId()).delete();
+                                                    // Decrement likes
+                                                    mForum.likes--;
+                                                    // Update with new number of likes
+                                                    collForums.document(mForum.forum_id).update("likes", mForum.likes);
+                                                    // Set the new image
+                                                    setImage();
+                                                }
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                } else {
+                    // Like a Forum
+                    collLikes.get()
+                            .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                @Override
+                                public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                    // If this is the first Like
+                                    if (mForum.likes == 0) {
+                                        Log.d(TAG, "First Like");
+                                        HashMap<String, Object> like = new HashMap<>();
+                                        like.put("user_id", mAuth.getCurrentUser().getUid());
+
+                                        String like_id = collLikes.document().getId();
+                                        collLikes.document(like_id).set(like);
+
+                                        // Delete dummy file
+                                        collLikes.document("dummy").delete();
+                                    } else {
+                                        // Add like
+                                        Log.d(TAG, "Like");
+                                        HashMap<String, Object> like = new HashMap<>();
+                                        like.put("user_id", mAuth.getCurrentUser().getUid());
+
+                                        String like_id = collLikes.document().getId();
+                                        collLikes.document(like_id).set(like);
+
+                                    }
+                                    // Increment likes
+                                    mForum.likes++;
+                                    // Update likes
+                                    collForums.document(mForum.forum_id).update("likes", mForum.likes);
+                                    // Set new image
+                                    setImage();
+                                }
+                            });
+                }
+            }
+
+            /**
+             * This method sets the image to Like or Not Like depending on if the user's id is in
+             * the list of liked users
+             */
+            private void setImage() {
+                // This sets the initial like image
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
+                CollectionReference collForums = db.collection("forums");
+                CollectionReference collLikes = collForums.document(mForum.forum_id).collection("likes");
+
+                // ImageView
                 ImageView img = mBinding.imageViewLike;
 
-                // By Default, Like Image is not-liked
+                // Set to Not Like by default
+                img.setImageResource(R.drawable.like_not_favorite);
+
                 // Check if it should be liked and change the image if needed
                 collLikes.get()
                         .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
@@ -191,78 +317,6 @@ public class ForumsFragment extends Fragment {
                                 Log.d(TAG, "onFailure: ");
                             }
                         });
-
-
-                // TODO THIS DOES NOT WORK
-                mBinding.imageViewLike.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        Log.d(TAG, "onClick: ");
-                        // Check Database if the user's name is in the list or not
-                        collLikes.get()
-                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                                    @Override
-                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-
-                                        for (QueryDocumentSnapshot document: queryDocumentSnapshots) {
-                                            mAuth = FirebaseAuth.getInstance();
-                                            getActivity().runOnUiThread(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    // If dummy document take care of it
-                                                    if (document.getString("user_id").equals(mAuth.getCurrentUser().getUid())) {
-                                                        Log.d(TAG, "Delete Like");
-                                                        // In the case where this is the only like left, you must create a dummy file
-                                                        // Otherwise the collection will disappear and break the database
-                                                        if (mForum.likes == 1) {
-                                                            HashMap<String, Object> like = new HashMap<>();
-                                                            like.put("Dummy", "Dummy");
-
-                                                            String like_id = collLikes.document("dummy").getId();
-                                                            collLikes.document(like_id).set(like);
-                                                        }
-                                                        collLikes.document(document.getId()).delete();
-                                                        mForum.likes--;
-                                                        collForums.document(mForum.forum_id).update("likes", mForum.likes);
-                                                        img.setImageResource(R.drawable.like_not_favorite);
-                                                    }
-                                                }
-                                            });
-                                        }
-                                        // First Like
-                                        if (mForum.likes == 0) {
-                                            Log.d(TAG, "First Like");
-                                            HashMap<String, Object> like = new HashMap<>();
-                                            like.put("user_id", mAuth.getCurrentUser().getUid());
-
-                                            String like_id = collLikes.document().getId();
-                                            collLikes.document(like_id).set(like);
-
-                                            collLikes.document("dummy").delete();
-                                            mForum.likes++;
-                                            collForums.document(mForum.forum_id).update("likes", mForum.likes);
-                                            img.setImageResource(R.drawable.like_favorite);
-                                        } else {
-                                            Log.d(TAG, "Like");
-                                            HashMap<String, Object> like = new HashMap<>();
-                                            like.put("user_id", mAuth.getCurrentUser().getUid());
-
-                                            String like_id = collLikes.document().getId();
-                                            collLikes.document(like_id).set(like);
-
-                                            mForum.likes++;
-                                            collForums.document(mForum.forum_id).update("likes", mForum.likes);
-                                        }
-                                    }
-                                })
-                                .addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        Log.d(TAG, "onFailure: ");
-                                    }
-                                });
-                    }
-                });
             }
         }
     }
