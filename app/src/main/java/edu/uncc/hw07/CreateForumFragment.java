@@ -114,6 +114,7 @@ public class CreateForumFragment extends Fragment {
         forum.put("title", forum_title);
         forum.put("createdAt", date);
         forum.put("likes", 0);
+        forum.put("comments", 0);
 
         // Collection Reference of "forums" collection
         CollectionReference collRef = db.collection("forums");
@@ -123,6 +124,14 @@ public class CreateForumFragment extends Fragment {
 
         // Store the id into the document
         forum.put("forum_id", forum_id);
+
+        HashMap<String, Object> collection = new HashMap<>();
+        collection.put("Dummy", "Dummy");
+
+        // Create sub collections of comments and likes
+        // Need dummy documents to exist
+        collRef.document(forum_id).collection("comments").document("dummy").set(collection);
+        collRef.document(forum_id).collection("likes").document("dummy").set(collection);
 
         // Set the data into the document created using its id to locate it
         db.collection("forums").document(forum_id)

@@ -13,8 +13,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -22,6 +26,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import edu.uncc.hw07.databinding.ForumRowItemBinding;
 import edu.uncc.hw07.databinding.FragmentForumsBinding;
@@ -89,6 +94,7 @@ public class ForumsFragment extends Fragment {
                 .addSnapshotListener(new EventListener<QuerySnapshot>() {
                     @Override
                     public void onEvent(@Nullable QuerySnapshot value, @Nullable FirebaseFirestoreException error) {
+                        mForums.clear();
                         for (QueryDocumentSnapshot document: value){
                             Log.d(TAG, "onEvent: " + document.getString("creator_name"));
                             Forum forum = document.toObject(Forum.class);
@@ -131,29 +137,153 @@ public class ForumsFragment extends Fragment {
                 mBinding = binding;
             }
 
+            // Track if the user liked the image or not
+            boolean liked;
+
             public void setupUI(Forum forum) {
                 mForum = forum;
                 mBinding.textViewForumTitle.setText(mForum.title);
                 mBinding.textViewForumCreatedBy.setText(mForum.creator_name);
                 mBinding.textViewForumText.setText(mForum.description);
-                // TODO Get date/time created
-                mBinding.textViewForumLikesDate.setText(" Likes | " + mForum.createdAt);
+                mBinding.textViewForumLikesDate.setText(mForum.getLikes() + " Likes | " + mForum.createdAt);
 
                 mBinding.imageViewDelete.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        // TODO Delete Forum
+                        delete(mForum);
                     }
                 });
 
+                // Get the user id
+                mAuth = FirebaseAuth.getInstance();
+                String user_id = mAuth.getCurrentUser().getUid();
+
+                // If the forum is created by the user, make delete button visible
+                if (user_id.equals(mForum.creator_id)) {
+                    mBinding.imageViewDelete.setVisibility(View.VISIBLE);
+                } else {
+                    mBinding.imageViewDelete.setVisibility(View.INVISIBLE);
+                }
+
+                // This sets the initial like image
+                FirebaseFirestore db = FirebaseFirestore.getInstance();
+                CollectionReference collForums = db.collection("forums");
+                CollectionReference collLikes = collForums.document(mForum.forum_id).collection("likes");
+
+                ImageView img = mBinding.imageViewLike;
+
+                // By Default, Like Image is not-liked
+                // Check if it should be liked and change the image if needed
+                collLikes.get()
+                        .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                            @Override
+                            public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                                for (QueryDocumentSnapshot document: queryDocumentSnapshots) {
+                                    if((mAuth.getCurrentUser().getUid()).equals(document.getString("user_id"))) {
+                                        img.setImageResource(R.drawable.like_favorite);
+                                    }
+                                }
+                            }
+                        })
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Log.d(TAG, "onFailure: ");
+                            }
+                        });
+
+
+                // TODO THIS DOES NOT WORK
                 mBinding.imageViewLike.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
-                        // TODO Like/Unlike Forum
+                        Log.d(TAG, "onClick: ");
+                        // Check Database if the user's name is in the list or not
+                        collLikes.get()
+                                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                                    @Override
+                                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+
+                                        for (QueryDocumentSnapshot document: queryDocumentSnapshots) {
+                                            mAuth = FirebaseAuth.getInstance();
+                                            getActivity().runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    // If dummy document take care of it
+                                                    if (document.getString("user_id").equals(mAuth.getCurrentUser().getUid())) {
+                                                        Log.d(TAG, "Delete Like");
+                                                        // In the case where this is the only like left, you must create a dummy file
+                                                        // Otherwise the collection will disappear and break the database
+                                                        if (mForum.likes == 1) {
+                                                            HashMap<String, Object> like = new HashMap<>();
+                                                            like.put("Dummy", "Dummy");
+
+                                                            String like_id = collLikes.document("dummy").getId();
+                                                            collLikes.document(like_id).set(like);
+                                                        }
+                                                        collLikes.document(document.getId()).delete();
+                                                        mForum.likes--;
+                                                        collForums.document(mForum.forum_id).update("likes", mForum.likes);
+                                                        img.setImageResource(R.drawable.like_not_favorite);
+                                                    }
+                                                }
+                                            });
+                                        }
+                                        // First Like
+                                        if (mForum.likes == 0) {
+                                            Log.d(TAG, "First Like");
+                                            HashMap<String, Object> like = new HashMap<>();
+                                            like.put("user_id", mAuth.getCurrentUser().getUid());
+
+                                            String like_id = collLikes.document().getId();
+                                            collLikes.document(like_id).set(like);
+
+                                            collLikes.document("dummy").delete();
+                                            mForum.likes++;
+                                            collForums.document(mForum.forum_id).update("likes", mForum.likes);
+                                            img.setImageResource(R.drawable.like_favorite);
+                                        } else {
+                                            Log.d(TAG, "Like");
+                                            HashMap<String, Object> like = new HashMap<>();
+                                            like.put("user_id", mAuth.getCurrentUser().getUid());
+
+                                            String like_id = collLikes.document().getId();
+                                            collLikes.document(like_id).set(like);
+
+                                            mForum.likes++;
+                                            collForums.document(mForum.forum_id).update("likes", mForum.likes);
+                                        }
+                                    }
+                                })
+                                .addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Log.d(TAG, "onFailure: ");
+                                    }
+                                });
                     }
                 });
             }
         }
+    }
+
+    private void delete(Forum forum) {
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        db.collection("forums").document(forum.forum_id)
+                .delete()
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+                        Log.d(TAG, "onSuccess: ");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d(TAG, "onFailure: ");
+                    }
+                });
     }
 
     @Override
